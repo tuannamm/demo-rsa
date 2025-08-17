@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/demo-rsa/static/css/main.398b6b85.css",
+    "main.js": "/demo-rsa/static/js/main.81626f01.js",
+    "index.html": "/demo-rsa/index.html",
+    "main.398b6b85.css.map": "/demo-rsa/static/css/main.398b6b85.css.map",
+    "main.81626f01.js.map": "/demo-rsa/static/js/main.81626f01.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.398b6b85.css",
+    "static/js/main.81626f01.js"
+  ]
+}
