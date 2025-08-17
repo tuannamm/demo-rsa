@@ -9,16 +9,16 @@ function App() {
   const tabs = [
     { id: 'demo', label: 'Demo Thực hành' },
     { id: 'explanation', label: 'Giải thích' },
-    { id: 'security', label: 'Bảo mật Nâng cao' }
+    { id: 'security', label: 'Bảo mật Nâng cao' },
   ];
 
   return (
     <div className="container">
-      <h1>Demo Mã hóa RSA Nâng cao</h1>
+      <h1>Demo Mã hóa RSA</h1>
 
       <div className="tabs">
-        {tabs.map(tab => (
-          <div 
+        {tabs.map((tab) => (
+          <div
             key={tab.id}
             className={`tab ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
@@ -32,16 +32,20 @@ function App() {
         {activeTab === 'demo' && <DemoTab />}
       </div>
 
-      <div className={`tab-content ${activeTab === 'explanation' ? 'active' : ''}`}>
+      <div
+        className={`tab-content ${activeTab === 'explanation' ? 'active' : ''}`}
+      >
         {activeTab === 'explanation' && <ExplanationTab />}
       </div>
 
-      <div className={`tab-content ${activeTab === 'security' ? 'active' : ''}`}>
+      <div
+        className={`tab-content ${activeTab === 'security' ? 'active' : ''}`}
+      >
         {activeTab === 'security' && <SecurityTab />}
       </div>
 
       <div className="footer">
-        <p>Demo Mã hóa RSA Nâng cao - Tài liệu học tập</p>
+        <p>Demo Mã hóa RSA</p>
       </div>
     </div>
   );
