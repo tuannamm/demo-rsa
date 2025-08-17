@@ -1,20 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import JSEncrypt from 'jsencrypt';
+import React, { useState } from 'react';
 import PasswordInput from './PasswordInput';
-import { deriveKey, encryptAES, decryptAES } from '../utils/crypto';
+import {
+  deriveKey,
+  encryptAES,
+  decryptAES,
+  generateRSAKeyPair,
+  exportRSAPublicKey,
+  exportRSAPrivateKey,
+  encryptRSA,
+  decryptRSA,
+  importRSAPrivateKey,
+} from '../utils/crypto';
 
 function DemoTab() {
   // State for key management
   const [keySize, setKeySize] = useState('1024');
   const [passphrase, setPassphrase] = useState('');
-  const [publicKey, setPublicKey] = useState('');
+  const [publicKey, setPublicKey] = useState(''); // PEM format for display
+  const [publicKeyObj, setPublicKeyObj] = useState(null); // CryptoKey object
+  const [privateKeyObj, setPrivateKeyObj] = useState(null); // CryptoKey object
   const [encryptedPrivateKey, setEncryptedPrivateKey] = useState(null);
   const [salt, setSalt] = useState(null);
   const [iv, setIv] = useState(null);
-  const [jsEncrypt, setJsEncrypt] = useState(null);
   const [showKeyManagement, setShowKeyManagement] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const [privateKey, setPrivateKey] = useState('');
+  const [privateKey, setPrivateKey] = useState(''); // PEM format for display
 
   // State for passphrase change
   const [currentPassphrase, setCurrentPassphrase] = useState('');
@@ -29,11 +39,6 @@ function DemoTab() {
   const [cipherText, setCipherText] = useState('');
   const [decryptedText, setDecryptedText] = useState('Chưa có dữ liệu giải mã');
   const [decryptPassphrase, setDecryptPassphrase] = useState('');
-
-  // Initialize JSEncrypt instance
-  useEffect(() => {
-    setJsEncrypt(new JSEncrypt());
-  }, []);
 
   // Generate RSA key pair
   const generateKeys = async () => {
@@ -50,24 +55,25 @@ function DemoTab() {
 
       console.log('Bắt đầu tạo cặp khóa RSA...');
 
-      // Generate RSA key pair
+      // Generate RSA key pair using Web Crypto API
       const keySizeValue = parseInt(keySize);
       console.log('Kích thước khóa:', keySizeValue);
 
-      // Create new JSEncrypt instance
-      const newJsEncrypt = new JSEncrypt();
-      newJsEncrypt.getKey(keySizeValue);
+      // Generate the key pair
+      const keyPair = await generateRSAKeyPair(keySizeValue);
       console.log('Đã tạo cặp khóa RSA');
 
-      const publicKeyValue = newJsEncrypt.getPublicKey();
-      const privateKeyValue = newJsEncrypt.getPrivateKey();
+      // Export keys to PEM format for display
+      const publicKeyPEM = await exportRSAPublicKey(keyPair.publicKey);
+      const privateKeyPEM = await exportRSAPrivateKey(keyPair.privateKey);
+
       console.log(
         'Đã lấy khóa công khai và riêng tư:',
-        publicKeyValue ? 'Có' : 'Không',
-        privateKeyValue ? 'Có' : 'Không'
+        publicKeyPEM ? 'Có' : 'Không',
+        privateKeyPEM ? 'Có' : 'Không'
       );
 
-      if (!publicKeyValue || !privateKeyValue) {
+      if (!publicKeyPEM || !privateKeyPEM) {
         throw new Error('Không thể tạo cặp khóa RSA');
       }
 
@@ -79,7 +85,7 @@ function DemoTab() {
 
       // Encrypt private key with derived key
       const encryptionResult = await encryptAES(
-        privateKeyValue,
+        privateKeyPEM,
         derivedKeyData.key
       );
       const encryptedPrivateKeyValue = encryptionResult.encryptedData;
@@ -87,9 +93,10 @@ function DemoTab() {
       console.log('Đã mã hóa khóa riêng tư thành công');
 
       // Update state
-      setJsEncrypt(newJsEncrypt);
-      setPublicKey(publicKeyValue);
-      setPrivateKey(privateKeyValue);
+      setPublicKeyObj(keyPair.publicKey);
+      setPrivateKeyObj(keyPair.privateKey);
+      setPublicKey(publicKeyPEM);
+      setPrivateKey(privateKeyPEM);
       setEncryptedPrivateKey(encryptedPrivateKeyValue);
       setSalt(saltValue);
       setIv(ivValue);
@@ -128,7 +135,7 @@ function DemoTab() {
         const derivedKeyData = await deriveKey(currentPassphraseValue, salt);
 
         // Try to decrypt the private key
-        const decryptedPrivateKey = await decryptAES(
+        const decryptedPrivateKeyPEM = await decryptAES(
           encryptedPrivateKey,
           derivedKeyData.key,
           iv
@@ -137,7 +144,7 @@ function DemoTab() {
         // If successful, encrypt with new passphrase
         const newDerivedKeyData = await deriveKey(newPassphraseValue);
         const newEncryptionResult = await encryptAES(
-          decryptedPrivateKey,
+          decryptedPrivateKeyPEM,
           newDerivedKeyData.key
         );
 
@@ -156,6 +163,7 @@ function DemoTab() {
         setCurrentPassphrase('');
         setNewPassphrase('');
       } catch (error) {
+        console.error('Error verifying passphrase:', error);
         setPassphraseMessage(
           '<div class="warning-box">Passphrase hiện tại không đúng!</div>'
         );
@@ -171,20 +179,29 @@ function DemoTab() {
   };
 
   // Encrypt message
-  const encryptMessage = () => {
-    if (!jsEncrypt || !jsEncrypt.getPublicKey()) {
-      alert('Vui lòng tạo cặp khóa trước!');
-      return;
-    }
+  const encryptMessage = async () => {
+    try {
+      if (!publicKeyObj) {
+        alert('Vui lòng tạo cặp khóa trước!');
+        return;
+      }
 
-    if (!plainText) {
-      alert('Vui lòng nhập tin nhắn cần mã hóa!');
-      return;
-    }
+      if (!plainText) {
+        alert('Vui lòng nhập tin nhắn cần mã hóa!');
+        return;
+      }
 
-    const encrypted = jsEncrypt.encrypt(plainText);
-    setEncryptedText(encrypted);
-    setCipherText(encrypted);
+      console.log('publicKeyObj:', publicKeyObj);
+      console.log('plainText:', plainText);
+
+      // Use Web Crypto API for RSA encryption
+      const encrypted = await encryptRSA(plainText, publicKeyObj);
+      setEncryptedText(encrypted);
+      setCipherText(encrypted);
+    } catch (error) {
+      console.error('Error encrypting message:', error);
+      alert('Lỗi khi mã hóa tin nhắn: ' + error.message);
+    }
   };
 
   // Decrypt message
@@ -213,17 +230,18 @@ function DemoTab() {
 
       // Decrypt the private key
       try {
-        const decryptedPrivateKey = await decryptAES(
+        // Get the private key PEM from encrypted storage
+        const decryptedPrivateKeyPEM = await decryptAES(
           encryptedPrivateKey,
           derivedKeyData.key,
           iv
         );
 
-        // Set the private key in JSEncrypt
-        jsEncrypt.setPrivateKey(decryptedPrivateKey);
+        // Import the private key
+        const privateKey = await importRSAPrivateKey(decryptedPrivateKeyPEM);
 
-        // Decrypt the message
-        const decrypted = jsEncrypt.decrypt(cipherTextValue);
+        // Decrypt the message using Web Crypto API
+        const decrypted = await decryptRSA(cipherTextValue, privateKey);
 
         if (decrypted === false) {
           setDecryptedText(
@@ -233,6 +251,7 @@ function DemoTab() {
           setDecryptedText(decrypted);
         }
       } catch (error) {
+        console.error('Error in decryption process:', error);
         setDecryptedText(
           'Không thể giải mã. Passphrase không đúng hoặc dữ liệu đã bị hỏng.'
         );
