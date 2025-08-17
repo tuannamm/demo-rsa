@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"/home/namntt/Workspace/Personal Projects/demo-rsa/src/components\")",
+      "Bash(mkdir -p \"/home/namntt/Workspace/Personal Projects/demo-rsa/src/utils\")",
+      "Bash(npm install)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
